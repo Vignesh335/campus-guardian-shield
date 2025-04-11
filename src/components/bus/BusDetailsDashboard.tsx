@@ -63,20 +63,20 @@ const BUSES = [
   }
 ];
 
-const BusDetailsDashboard = () => {
+const BusDetailsDashboard = ({ destinationsData, busesData }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [destinationFilter, setDestinationFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [busesData, setBusesData] = useState([])
+
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "onCampus":
+      case "in_campus":
         return <Badge className="bg-green-500">On Campus</Badge>;
-      case "scheduled":
-        return <Badge className="bg-orange-500">Scheduled</Badge>;
-      case "departed":
-        return <Badge className="bg-red-500">Departed</Badge>;
+      case "out_campus":
+        return <Badge className="bg-orange-500">Out of campus</Badge>;
+      // case "departed":
+      //   return <Badge className="bg-red-500">Departed</Badge>;
       default:
         return <Badge>Unknown</Badge>;
     }
@@ -89,31 +89,19 @@ const BusDetailsDashboard = () => {
       // bus.busNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       // bus.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
       // bus.driverName.toLowerCase().includes(searchTerm.toLowerCase());
-      bus.bus_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bus.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bus.driver.toLowerCase().includes(searchTerm.toLowerCase());
+      bus.plate_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bus?.next_trip?.route?.end_point.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bus.driver.name.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesDestination = destinationFilter === "all" || bus.destination === destinationFilter;
-    const matchesStatus = statusFilter === "all" || bus.status === statusFilter;
+    const matchesDestination = destinationFilter === "all" || bus?.next_trip?.route?.end_point === destinationFilter;
+    const matchesStatus = statusFilter === "all" || bus.location_status === statusFilter;
 
     return matchesSearch && matchesDestination && matchesStatus;
+    // return bus
   });
 
   // Get unique destinations for filter
   const destinations = Array.from(new Set(BUSES.map(bus => bus.destination)));
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const response = await axios.get(`${API_BASE_URL}/bus_track/bus_data/`);
-        setBusesData(response.data.buses)
-      } catch (error) {
-        console.error('Error fetching faculty:', error.response?.data || error.message);
-      }
-    })();
-  }, []);
-
-  console.log(new Date(busesData?.[0]?.locations?.filter((location) => location.status === 'On Campus')?.[0]?.timestamp).toLocaleString())
 
   return (
     <Card>
@@ -145,7 +133,10 @@ const BusDetailsDashboard = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Destinations</SelectItem>
-                {destinations.map(dest => (
+                {/* {destinations.map(dest => (
+                  <SelectItem key={dest} value={dest}>{dest}</SelectItem>
+                ))} */}
+                {destinationsData.map(dest => (
                   <SelectItem key={dest} value={dest}>{dest}</SelectItem>
                 ))}
               </SelectContent>
@@ -160,9 +151,9 @@ const BusDetailsDashboard = () => {
                 {/* <SelectItem value="onCampus">On Campus</SelectItem>
                 <SelectItem value="scheduled">Scheduled</SelectItem>
                 <SelectItem value="departed">Departed</SelectItem> */}
-                <SelectItem value="On Campus">On Campus</SelectItem>
-                <SelectItem value="Scheduled">Scheduled</SelectItem>
-                <SelectItem value="Departed">Departed</SelectItem>
+                <SelectItem value="in_campus">On Campus</SelectItem>
+                <SelectItem value="out_campus">Out of Campus</SelectItem>
+                {/* <SelectItem value="Departed">Departed</SelectItem> */}
               </SelectContent>
             </Select>
           </div>
@@ -186,15 +177,15 @@ const BusDetailsDashboard = () => {
                 filteredBuses.map((bus) => (
                   <TableRow key={bus.id}>
                     {/* <TableCell className="font-medium">{bus.busNumber}</TableCell> */}
-                    <TableCell className="font-medium">{bus.bus_number}</TableCell>
+                    <TableCell className="font-medium">{bus.plate_number}</TableCell>
                     {/* <TableCell>{bus.destination}</TableCell> */}
-                    <TableCell>{bus?.schedules?.[0]?.destination}</TableCell>
-                    <TableCell>{bus?.schedules?.[0]?.departure}</TableCell>
+                    <TableCell>{bus?.next_trip?.route?.end_point}</TableCell>
+                    <TableCell>{bus?.next_trip?.route?.start_point}</TableCell>
                     <TableCell>{bus?.driver?.name}</TableCell>
-                    <TableCell>{getStatusBadge(bus.status)}</TableCell>
-                    <TableCell>{new Date(busesData?.[0]?.locations?.filter((location) => location.status === 'On Campus')?.[0]?.timestamp).toLocaleString()}</TableCell>
+                    <TableCell>{getStatusBadge(bus.location_status)}</TableCell>
+                    <TableCell>{bus?.last_trip?.arrival_time ? new Date(bus?.last_trip?.arrival_time).toLocaleString() : '-'}</TableCell>
                     {/* <TableCell>{bus.lastExit}</TableCell> */}
-                    <TableCell>{new Date(bus?.locations?.filter((location) => location.status === 'departed')?.[0]?.timeStamp).toLocaleString() !== 'Invalid Date' ? new Date(bus?.locations?.filter((location) => location.status === 'departed')?.[0]?.timeStamp).toLocaleString() : ''}</TableCell>
+                    <TableCell>{bus?.next_trip?.arrival_time ? new Date(bus?.next_trip?.arrival_time).toLocaleString() : '-'}</TableCell>
                   </TableRow>
                 ))
               ) : (
