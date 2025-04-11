@@ -12,6 +12,8 @@ import VisitorFormPanel from "@/components/visitor/VisitorFormPanel";
 import FacultyApprovalPanel from "@/components/visitor/FacultyApprovalPanel";
 import { Camera, User, CheckCircle, XCircle, FileText, Bell, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { API_BASE_URL } from "../Constants";
+import axios from "axios";
 
 // Mock faculty list
 const FACULTY_LIST = [
@@ -34,6 +36,7 @@ type VisitorData = {
 export default function VisitorDetectionFlow() {
   const [activeStep, setActiveStep] = useState(0);
   const [faceMatch, setFaceMatch] = useState<boolean | null>(null);
+  const [facultyListData, setFacultyListData] = useState([])
   const [visitorData, setVisitorData] = useState<VisitorData>({
     name: "",
     purpose: "",
@@ -42,6 +45,7 @@ export default function VisitorDetectionFlow() {
   });
   const [isCapturing, setIsCapturing] = useState(false);
   const [approvalResponse, setApprovalResponse] = useState<"approved" | "denied" | null>(null);
+  const [newVisitor, setNewVisitor] = useState<any>({})
   const { toast } = useToast();
 
   // Start face detection simulation when component mounts
@@ -51,6 +55,17 @@ export default function VisitorDetectionFlow() {
     }
   }, [activeStep]);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/management/`);
+        setFacultyListData(response.data)
+      } catch (error) {
+        console.error('Error fetching faculty:', error.response?.data || error.message);
+      }
+    })();
+  }, []);
+
   // Function to simulate face detection
   const simulateFaceDetection = () => {
     setIsCapturing(true);
@@ -59,7 +74,7 @@ export default function VisitorDetectionFlow() {
       // Random result to demonstrate both flows
       const matched = Math.random() > 0.5;
       setFaceMatch(matched);
-      
+
       if (matched) {
         toast({
           title: "Authorized Person",
@@ -81,14 +96,38 @@ export default function VisitorDetectionFlow() {
     }, 2000);
   };
 
-  // Handle form submission
-  const handleVisitorFormSubmit = (data: VisitorData) => {
-    setVisitorData({
-      ...data,
-      timestamp: new Date().toISOString(),
-      status: "pending"
-    });
-    setActiveStep(3); // Go to faculty notification step
+  // // Handle form submission
+  // const handleVisitorFormSubmit = (data: VisitorData) => {
+  //   setVisitorData({
+  //     ...data,
+  //     timestamp: new Date().toISOString(),
+  //     status: "pending"
+  //   });
+  //   setActiveStep(3); // Go to faculty notification step
+  // };
+  const handleVisitorFormSubmit = async (formData: FormData) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/visitors/`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      // Log the response
+      console.log("Visitor created:", response.data);
+
+      setNewVisitor(response.data)
+
+      // Optionally return the response data if you want to use it elsewhere
+      return response.data;
+    } catch (error) {
+      // Log any errors that occur during the request
+
+      console.error("Error submitting form:", error);
+
+      // You can return a failure status or null to indicate an error
+      return null;
+    }
   };
 
   // Handle faculty approval response
@@ -99,16 +138,16 @@ export default function VisitorDetectionFlow() {
       status: response
     }));
     setActiveStep(4); // Go to response simulation step
-    
+
     // Show toast notification
     toast({
       title: response === "approved" ? "Entry Approved" : "Entry Denied",
-      description: response === "approved" 
-        ? "Guard has been notified to allow visitor entry." 
+      description: response === "approved"
+        ? "Guard has been notified to allow visitor entry."
         : "Guard has been notified to deny visitor entry.",
       variant: response === "approved" ? "default" : "destructive",
     });
-    
+
     // After showing the result, add to logs and reset
     setTimeout(() => {
       setActiveStep(5); // Go to audit step
@@ -132,7 +171,7 @@ export default function VisitorDetectionFlow() {
   return (
     <div className="space-y-6">
       <Steps activeStep={activeStep}>
-        <Step 
+        <Step
           icon={<Camera className="h-5 w-5" />}
           title="Live Face Capture"
           description="CCTV captures face of incoming visitor"
@@ -165,7 +204,7 @@ export default function VisitorDetectionFlow() {
                 )}
               </div>
             </div>
-            
+
             {!isCapturing && faceMatch === null && (
               <Button onClick={simulateFaceDetection}>
                 Start Face Detection
@@ -173,8 +212,8 @@ export default function VisitorDetectionFlow() {
             )}
           </div>
         </Step>
-        
-        <Step 
+
+        <Step
           icon={<User className="h-5 w-5" />}
           title="AI Face Match Check"
           description="System matches face against database"
@@ -192,7 +231,7 @@ export default function VisitorDetectionFlow() {
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card className={cn("border-l-4", faceMatch === false ? "border-l-red-500" : "border-l-muted")}>
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-2">
@@ -206,31 +245,34 @@ export default function VisitorDetectionFlow() {
             </div>
           </div>
         </Step>
-        
-        <Step 
+
+        <Step
           icon={<FileText className="h-5 w-5" />}
           title="Visitor Info Collection"
           description="Collect details from the visitor"
         >
-          <VisitorFormPanel 
-            facultyList={FACULTY_LIST} 
-            onSubmit={handleVisitorFormSubmit} 
+          <VisitorFormPanel
+            // facultyList={FACULTY_LIST}
+            facultyList={facultyListData}
+            newVisitor={newVisitor}
+            onSubmit={handleVisitorFormSubmit}
           />
         </Step>
-        
-        <Step 
+
+        <Step
           icon={<Bell className="h-5 w-5" />}
           title="Faculty Notification"
           description="Faculty receives visitor request"
         >
-          <FacultyApprovalPanel 
-            visitor={visitorData}
+          <FacultyApprovalPanel
+            // visitor={visitorData}
+            visitor={newVisitor}
             faculty={FACULTY_LIST.find(f => f.id === visitorData.faculty)}
             onResponse={handleApprovalResponse}
           />
         </Step>
-        
-        <Step 
+
+        <Step
           icon={<Clock className="h-5 w-5" />}
           title="Faculty Response"
           description="Guard receives faculty response"
@@ -247,20 +289,20 @@ export default function VisitorDetectionFlow() {
                 <XCircle className="h-12 w-12 text-red-500" />
               )}
             </div>
-            
+
             <h3 className="text-xl font-bold text-center">
               {approvalResponse === "approved" ? "Entry Approved" : "Entry Denied"}
             </h3>
-            
+
             <p className="text-center text-muted-foreground max-w-md">
-              {approvalResponse === "approved" 
-                ? "The faculty member has approved this visitor. Guard has been notified to allow entry." 
+              {approvalResponse === "approved"
+                ? "The faculty member has approved this visitor. Guard has been notified to allow entry."
                 : "The faculty member has denied this visitor. Guard has been notified to deny entry."}
             </p>
           </div>
         </Step>
-        
-        <Step 
+
+        <Step
           icon={<FileText className="h-5 w-5" />}
           title="Audit & Reporting"
           description="Entry recorded in visitor logs"
@@ -281,43 +323,57 @@ export default function VisitorDetectionFlow() {
                   <tr>
                     <td className="px-4 py-3">
                       <div className="h-10 w-10 rounded-full bg-muted overflow-hidden">
-                        <img 
-                          src={visitorData.photoUrl || "/placeholder.svg"} 
-                          alt={visitorData.name} 
+                        <img
+                          // src={visitorData.photoUrl || "/placeholder.svg"}
+                          // alt={visitorData.name}
+                          src={newVisitor.photoUrl || "/placeholder.svg"}
+                          alt={newVisitor.name}
                           className="h-full w-full object-cover"
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-3 font-medium">{visitorData.name}</td>
+                    {/* <td className="px-4 py-3 font-medium">{visitorData.name}</td> */}
+                    <td className="px-4 py-3 font-medium">{newVisitor.name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{
-                      visitorData.timestamp 
-                        ? new Date(visitorData.timestamp).toLocaleString() 
+                      // visitorData.timestamp
+                      //   ? new Date(visitorData.timestamp).toLocaleString()
+                      //   : "-"
+                      newVisitor.check_in
+                        ? new Date(newVisitor.check_in).toLocaleString()
                         : "-"
                     }</td>
                     <td className="px-4 py-3">
                       <span className={cn(
                         "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-                        visitorData.status === "approved" 
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300" 
-                          : visitorData.status === "denied"
-                          ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300"
-                          : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300"
+                        // visitorData.status === "approved"
+                        newVisitor.status === "APPROVED"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300"
+                          // : visitorData.status === "denied"
+                          : newVisitor.status === "DENIED"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300"
+                            : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300"
                       )}>
-                        {visitorData.status === "approved" 
-                          ? "Approved" 
-                          : visitorData.status === "denied" 
-                          ? "Denied" 
-                          : "Pending"}
+                        {/* {visitorData.status === "approved"
+                          ? "Approved"
+                          : visitorData.status === "denied"
+                            ? "Denied"
+                            : "Pending"} */}
+                        {newVisitor.status === "APPROVED"
+                          ? "Approved"
+                          : newVisitor.status === "DENIED"
+                            ? "Denied"
+                            : "Pending"}
                       </span>
                     </td>
                     <td className="px-4 py-3">{
-                      FACULTY_LIST.find(f => f.id === visitorData.faculty)?.name || "-"
+                      // FACULTY_LIST.find(f => f.id === visitorData.faculty)?.name || "-"
+                      facultyListData.find(f => f.id === newVisitor.whom_to_meet)?.display_name || "-"
                     }</td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            
+
             <div className="flex justify-center">
               <Button onClick={resetFlow}>
                 Start New Detection

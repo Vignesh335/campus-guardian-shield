@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, XCircle, Clock, Search, FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import axios from 'axios';
+import { API_BASE_URL } from "../Constants";
 
 // Mock visitor data
 const MOCK_VISITORS = [
@@ -95,21 +97,37 @@ const MOCK_VISITORS = [
 export default function VisitorEntryLogs() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  
+  const [data, setData] = useState([])
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/visitors/`);
+        setData(response.data)
+      } catch (error) {
+        console.error('Error fetching logs:', error.response?.data || error.message);
+      }
+    })();
+  }, []);
+
   // Filter the visitors based on search query and status filter
-  const filteredVisitors = MOCK_VISITORS.filter(visitor => {
-    const matchesSearch = 
-      visitor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      visitor.faculty.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      visitor.purpose.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = 
-      statusFilter === "all" || 
+  // const filteredVisitors = MOCK_VISITORS.filter(visitor => {
+  const filteredVisitors = data.filter((visitor: any) => {
+    const matchesSearch =
+      // visitor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      // visitor.faculty.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      // visitor.purpose.toLowerCase().includes(searchQuery.toLowerCase());
+      (visitor.name && visitor.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (visitor.whom_to_meet && visitor.whom_to_meet.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (visitor.purpose && visitor.purpose.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const matchesStatus =
+      statusFilter === "all" ||
       visitor.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
-  
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
@@ -123,26 +141,29 @@ export default function VisitorEntryLogs() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          
+
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-32">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
+              {/* <SelectItem value="approved">Approved</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="denied">Denied</SelectItem>
+              <SelectItem value="denied">Denied</SelectItem> */}
+              <SelectItem value="APPROVED">Approved</SelectItem>
+              <SelectItem value="PENDING">Pending</SelectItem>
+              <SelectItem value="DENIED">Denied</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        
+
         <Button variant="outline" className="flex items-center gap-2">
           <FileDown className="h-4 w-4" />
           <span>Export</span>
         </Button>
       </div>
-      
+
       <div className="border rounded-md overflow-hidden">
         <Table>
           <TableCaption>A list of all visitor entries to the campus.</TableCaption>
@@ -162,8 +183,9 @@ export default function VisitorEntryLogs() {
                 <TableRow key={visitor.id}>
                   <TableCell>
                     <div className="h-8 w-8 rounded-full overflow-hidden bg-muted">
-                      <img 
-                        src={visitor.photoUrl}
+                      <img
+                        // src={visitor.photoUrl}
+                        src={visitor.photo}
                         alt={visitor.name}
                         className="h-full w-full object-cover"
                       />
@@ -173,24 +195,31 @@ export default function VisitorEntryLogs() {
                   <TableCell>{visitor.purpose}</TableCell>
                   <TableCell>
                     <div>
-                      <div>{visitor.faculty}</div>
+                      {/* <div>{visitor.faculty}</div> */}
+                      <div>{visitor.whom_to_meet}</div>
                       <div className="text-xs text-muted-foreground">{visitor.department}</div>
                     </div>
                   </TableCell>
-                  <TableCell>{new Date(visitor.timestamp).toLocaleString()}</TableCell>
+                  {/* <TableCell>{new Date(visitor.timestamp).toLocaleString()}</TableCell> */}
+                  <TableCell>{new Date(visitor.check_in).toLocaleString()}</TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"
                       className={cn(
                         "flex items-center gap-1",
-                        visitor.status === "approved" && "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300",
-                        visitor.status === "denied" && "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300",
-                        visitor.status === "pending" && "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300"
+                        // visitor.status === "approved" && "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300",
+                        // visitor.status === "denied" && "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300",
+                        // visitor.status === "pending" && "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300"
+                        visitor.status === "APPROVED" && "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300",
+                        visitor.status === "DENIED" && "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300",
+                        visitor.status === "PENDING" && "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300"
                       )}
                     >
-                      {visitor.status === "approved" ? (
+                      {/* {visitor.status === "approved" ? ( */}
+                      {visitor.status === "APPROVED" ? (
                         <CheckCircle className="h-3 w-3" />
-                      ) : visitor.status === "denied" ? (
+                        // ) : visitor.status === "denied" ? (
+                      ) : visitor.status === "DENIED" ? (
                         <XCircle className="h-3 w-3" />
                       ) : (
                         <Clock className="h-3 w-3" />

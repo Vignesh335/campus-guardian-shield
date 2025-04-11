@@ -15,41 +15,61 @@ interface Faculty {
 
 interface VisitorFormPanelProps {
   facultyList: Faculty[];
-  onSubmit: (data: {
-    name: string;
-    purpose: string;
-    faculty: number;
-    photoUrl: string;
-  }) => void;
+  // onSubmit: (data: {
+  //   name: string;
+  //   purpose: string;
+  //   faculty: number;
+  //   photoUrl: string;
+  // }) => void;
+  onSubmit: (data) => void;
+  newVisitor: any;
 }
 
-export default function VisitorFormPanel({ facultyList, onSubmit }: VisitorFormPanelProps) {
+export default function VisitorFormPanel({ facultyList, onSubmit, newVisitor }: VisitorFormPanelProps) {
   const [name, setName] = useState("");
   const [purpose, setPurpose] = useState("");
   const [faculty, setFaculty] = useState<number | string>("");
   const [photoUrl, setPhotoUrl] = useState("/placeholder.svg");
+  const [photo, setPhoto] = useState<any>();
   const [isCapturing, setIsCapturing] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name || !purpose || !faculty) {
       return;
     }
-    
-    onSubmit({
-      name,
-      purpose,
-      faculty: Number(faculty),
-      photoUrl
-    });
+
+    let formData = new FormData()
+
+    formData.append("name", name);
+    formData.append("purpose", purpose);
+    formData.append("whom_to_meet", String(faculty));
+    formData.append("photo", photo);
+
+    try {
+      const visitorResponse: any = await onSubmit(formData);
+
+      if (visitorResponse) {
+        // setName("")
+        // setPhoto(null)
+        // setPurpose("")
+        // setFaculty("")
+        console.log("Visitor created successfully:", visitorResponse);
+      } else {
+        console.error("Error creating visitor.");
+      }
+    } catch (error) {
+      console.error("An error occurred while submitting the form:", error);
+    }
+
+    // onSubmit(formData)
   };
 
   const simulatePhotoCapture = () => {
     setIsCapturing(true);
     setTimeout(() => {
       setIsCapturing(false);
-      // Simulate a captured photo - in a real app, this would be an actual camera capture
       setPhotoUrl("https://source.unsplash.com/random/400x400/?portrait");
     }, 1500);
   };
@@ -68,7 +88,7 @@ export default function VisitorFormPanel({ facultyList, onSubmit }: VisitorFormP
               required
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="visit-purpose">Purpose of Visit</Label>
             <Textarea
@@ -80,27 +100,29 @@ export default function VisitorFormPanel({ facultyList, onSubmit }: VisitorFormP
               required
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="faculty-select">Whom to Meet</Label>
-            <Select 
-              value={faculty.toString()} 
+            <Select
+              value={faculty.toString()}
               onValueChange={(value) => setFaculty(value)}
             >
               <SelectTrigger id="faculty-select">
                 <SelectValue placeholder="Select faculty member" />
               </SelectTrigger>
               <SelectContent>
-                {facultyList.map((f) => (
+                {/* {facultyList.map((f) => ( */}
+                {facultyList.map((f: any) => (
                   <SelectItem key={f.id} value={f.id.toString()}>
-                    {f.name} - {f.department}
+                    {/* {f.name} - {f.department} */}
+                    {f.display_name} - {f.department_name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         </div>
-        
+
         <div className="flex flex-col items-center justify-center space-y-4">
           <div className="relative w-48 h-48 border-2 border-dashed border-border rounded-lg overflow-hidden flex items-center justify-center bg-muted">
             {isCapturing ? (
@@ -110,9 +132,9 @@ export default function VisitorFormPanel({ facultyList, onSubmit }: VisitorFormP
               </div>
             ) : (
               <>
-                <img 
-                  src={photoUrl} 
-                  alt="Visitor" 
+                <img
+                  src={photoUrl}
+                  alt="Visitor"
                   className="absolute inset-0 w-full h-full object-cover"
                 />
                 {photoUrl === "/placeholder.svg" && (
@@ -121,11 +143,11 @@ export default function VisitorFormPanel({ facultyList, onSubmit }: VisitorFormP
               </>
             )}
           </div>
-          
+
           <div className="flex gap-3">
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               size="sm"
               onClick={simulatePhotoCapture}
               disabled={isCapturing}
@@ -133,10 +155,10 @@ export default function VisitorFormPanel({ facultyList, onSubmit }: VisitorFormP
               <Camera className="mr-2 h-4 w-4" />
               Capture Photo
             </Button>
-            
-            <Button 
-              type="button" 
-              variant="outline" 
+
+            <Button
+              type="button"
+              variant="outline"
               size="sm"
               onClick={() => document.getElementById('photo-upload')?.click()}
               disabled={isCapturing}
@@ -144,27 +166,32 @@ export default function VisitorFormPanel({ facultyList, onSubmit }: VisitorFormP
               <Upload className="mr-2 h-4 w-4" />
               Upload
             </Button>
-            <input 
+            <input
               id="photo-upload"
-              type="file" 
-              accept="image/*" 
+              type="file"
+              accept="image/*"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) {
-                  const url = URL.createObjectURL(file);
-                  setPhotoUrl(url);
+                  // const url = URL.createObjectURL(file);
+                  // setPhotoUrl(url);
+                  setPhoto(file);
+                }
+                else {
+                  setPhoto(null)
                 }
               }}
             />
           </div>
         </div>
       </div>
-      
+
       <div className="flex justify-end pt-4">
-        <Button 
-          type="submit" 
-          disabled={!name || !purpose || !faculty || photoUrl === "/placeholder.svg"}
+        <Button
+          type="submit"
+          // disabled={!name || !purpose || !faculty || photoUrl === "/placeholder.svg"}
+          disabled={!name || !purpose || !faculty || !photo || Object.keys(newVisitor).length > 0}
         >
           Submit Visitor Information
         </Button>

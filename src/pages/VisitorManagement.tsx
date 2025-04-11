@@ -15,7 +15,7 @@ export default function VisitorManagement() {
         <title>Visitor Management System - Campus Guardian Shield</title>
         <meta name="description" content="Track and manage campus visitors with facial recognition, approval workflows, and comprehensive audit logs." />
       </Helmet>
-      
+
       <Layout>
         <div className="space-y-6">
           <div>
@@ -40,7 +40,7 @@ export default function VisitorManagement() {
                 <span>Statistics</span>
               </TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="detection" className="space-y-4">
               <Card>
                 <CardHeader>
@@ -54,7 +54,7 @@ export default function VisitorManagement() {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="logs">
               <Card>
                 <CardHeader>
@@ -68,7 +68,7 @@ export default function VisitorManagement() {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="statistics">
               <Card>
                 <CardHeader>
